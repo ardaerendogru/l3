@@ -9,7 +9,7 @@ from torchvision import transforms
 import numpy as np
 from tqdm import tqdm
 from pathlib import Path
-from models.model_zoo import ClassificationModel
+from models.classification_model import ClassificationModel
 from dataset.tiny_imagenet import TinyImageNetDataset
 from dataset.augmentation import get_train_transforms, get_val_transforms
 
