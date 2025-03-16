@@ -44,7 +44,7 @@ def save_checkpoint(state, is_best, checkpoint_dir):
         best_filename = os.path.join(checkpoint_dir, 'model_best.pth')
         torch.save(state, best_filename)
 
-def train_epoch(model, dataloader, criterion, optimizer, device):
+def train_epoch(model, dataloader, criterion, optimizer, device, scaler, use_amp):
     """Train for one epoch"""
     model.train()
     running_loss = 0.0
@@ -59,12 +59,14 @@ def train_epoch(model, dataloader, criterion, optimizer, device):
         optimizer.zero_grad()
         
         # Forward pass
-        outputs = model(inputs)
-        loss = criterion(outputs, targets)
+        with torch.amp.autocast(device_type='cuda', enabled=use_amp):
+            outputs = model(inputs)
+            loss = criterion(outputs, targets)
         
         # Backward pass and optimize
-        loss.backward()
-        optimizer.step()
+        scaler.scale(loss).backward()
+        scaler.step(optimizer)
+        scaler.update()
         
         # Statistics
         running_loss += loss.item() * inputs.size(0)
@@ -76,7 +78,7 @@ def train_epoch(model, dataloader, criterion, optimizer, device):
     
     return running_loss / total, 100. * correct / total
 
-def validate(model, dataloader, criterion, device):
+def validate(model, dataloader, criterion, device, use_amp):
     """Validate the model"""
     model.eval()
     running_loss = 0.0
@@ -89,8 +91,9 @@ def validate(model, dataloader, criterion, device):
             inputs, targets = inputs.to(device), targets.to(device)
             
             # Forward pass
-            outputs = model(inputs)
-            loss = criterion(outputs, targets)
+            with torch.amp.autocast(device_type='cuda', enabled=use_amp):
+                outputs = model(inputs)
+                loss = criterion(outputs, targets)
             
             # Statistics
             running_loss += loss.item() * inputs.size(0)
@@ -119,6 +122,9 @@ def main():
     # Set device
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f"Using device: {device}")
+    
+    # Initialize GradScaler for mixed precision training
+    scaler = torch.amp.GradScaler(device,enabled=config['use_amp'])
     
     # Create datasets and dataloaders
     train_dataset = TinyImageNetDataset(
@@ -195,10 +201,10 @@ def main():
         print(f"\nEpoch: {epoch+1}/{config['epochs']}")
         
         # Train for one epoch
-        train_loss, train_acc = train_epoch(model, train_loader, criterion, optimizer, device)
+        train_loss, train_acc = train_epoch(model, train_loader, criterion, optimizer, device, scaler, config['use_amp'])
         
         # Validate
-        val_loss, val_acc = validate(model, val_loader, criterion, device)
+        val_loss, val_acc = validate(model, val_loader, criterion, device, config['use_amp'])
         
         # Update learning rate
         scheduler.step()
