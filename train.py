@@ -59,7 +59,12 @@ def train_epoch(model, dataloader, criterion, optimizer, device, scaler, use_amp
         optimizer.zero_grad()
         
         # Forward pass
-        with torch.amp.autocast(device_type='cuda', enabled=use_amp):
+        
+        # Use torch.amp.autocast to automatically cast operations to appropriate data types (FP16 or BF16)
+        # to improve performance (increase speed and reduce vram usage ) while maintaining accuracy. The device_type is set to 'cuda' to indicate that
+        # this is for GPU usage. The 'enabled' flag is set according to the config file, determining whether
+        # mixed precision is used or not.
+        with torch.amp.autocast(device_type=device, enabled=use_amp):
             outputs = model(inputs)
             loss = criterion(outputs, targets)
         
