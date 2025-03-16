@@ -1,6 +1,6 @@
-backbone: 'resnet18'  # Options: custom_backbone, resnet18, resnet34, resnet50, resnet101, resnet152
-head: 'resnet_linear_head'  # Options: custom_linear_head, resnet_linear_head
-out_features: 512  # Output features from backbone (1024 for resnet18)
+backbone: 'custom_backbone'  # Options: custom_backbone, resnet18, resnet34, resnet50, resnet101, resnet152
+head: 'custom_linear_head'  # Options: custom_linear_head, resnet_linear_head
+out_features: 1024  # Output features from backbone (1024 for resnet18)
 num_classes: 200  # Number of classes in Tiny ImageNet
 
 # Training parameters
